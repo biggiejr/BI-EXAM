@@ -1,9 +1,11 @@
 import os
 import bs4
 import requests
-import csv
 import numpy as np
 import pandas as pd
+import re
+import urllib.request, json
+
 
 titles = []
 dates = []
@@ -53,6 +55,34 @@ def get_data():
             df = pd.DataFrame(np.array(dataset))
             df.to_csv("scraped_events.csv", sep=',')
 
+def load_correct_csv():
+    df = pd.read_csv('scraped_events_correct.csv')
+
+    df['How_Much'] = get_price(str(df['How_Much']))
+    df['coordinates'] = geo_loc(str(df)['where'])
+    print(df)
+
+def get_price(price_str):
+    price_regexp = r"(?P<price>\d+)"
+    if 'Free admission' in price_str:
+        price = 0
+    elif 'ratis' in price_str:
+        price = 0
+    else:
+        m = re.search(price_regexp, price_str)
+        try:
+            price = int(m.group('price'))
+        except:
+            price = None
+    return price
+
+def geo_loc(input_string):
+    with urllib.request.urlopen("http://138.68.86.32/locs2.json") as url:
+        data = json.loads(url.read().decode())
+    locs = json.loads(data)[0]
+    lat, lon = locs.get(input_string)
+    print(data)
+    return lat, lon;
 
 def run():
     file_url = 'http://138.68.86.32/'
@@ -61,6 +91,7 @@ def run():
     txt_path = txt_path + '.html'
     get_links(file_url, txt_path)
     get_data()
+    load_correct_csv()
     print('done')
 
 
